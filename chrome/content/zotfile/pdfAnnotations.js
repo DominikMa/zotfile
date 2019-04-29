@@ -239,11 +239,13 @@ Zotero.ZotFile.pdfAnnotations = new function() {
             str_title = this.ZFgetString('extraction.noteTitle'),
             format_title = this.getPref("pdfExtraction.formatNoteTitle"),
             format_title_color = this.getPref("pdfExtraction.formatNoteTitleColor"),
+            format_title_separated = this.getPref("pdfExtraction.formatNoteTitleSeparated"),
             format_note = this.getPref("pdfExtraction.formatAnnotationNote"),
             format_highlight = this.getPref("pdfExtraction.formatAnnotationHighlight"),
             format_underline = this.getPref("pdfExtraction.formatAnnotationUnderline"),
             settings_colors = JSON.parse(this.getPref("pdfExtraction.colorCategories")),
             setting_color_notes = this.getPref("pdfExtraction.colorNotes"),
+            setting_separated_notes = this.getPref("pdfExtraction.separatedNotes"),
             cite = this.getPref("pdfExtraction.NoteFullCite") ? this.Wildcards.replaceWildcard(item, "%a %y:").replace(/_(?!.*_)/," and ").replace(/_/g,", ") : "p. ",
             repl = JSON.parse(this.getPref("pdfExtraction.replacements")),
             reg = repl.map(function(obj) {
@@ -256,7 +258,7 @@ Zotero.ZotFile.pdfAnnotations = new function() {
             note = title;
         if (this.getPref("pdfExtraction.UsePDFJSandPoppler"))
             note += ' ' + method;
-        if(setting_color_notes) note = {};
+        if(setting_color_notes || setting_separated_notes) note = {};
         // iterature through annotations
         for (var i=0; i < annotations.length; i++) {
         // annotations.map(function(anno) {
@@ -302,12 +304,18 @@ Zotero.ZotFile.pdfAnnotations = new function() {
 							    {'content': anno.markup, 'cite': link, 'page': page, 'uri': uri, 'label': anno.title, 
 							     'color': color, 'color_category': color_category_hex, 'color_hex': color_hex, 'color_category_name': color_category,
 							     'group': groupID, 'key': att.key});
-                if(!setting_color_notes)
+                if(!setting_color_notes && !setting_separated_notes)
                     note += markup_formated;
-                else {
+                else if (!setting_separated_notes) {
                     if(!(color_category in note))
                         note[color_category] = this.Utils.str_format(format_title_color, {'title': str_title, 'date': date_str, 'color': color_category});
                     note[color_category] += markup_formated;
+                } else {
+                    if(!(i in note)) {
+                        var first_words = anno.markup.replace(/(([^\s]+\s\s*){5})(.*)/,"$1...");
+                        note[i] = this.Utils.str_format(format_title_separated, {'title': str_title, 'date': date_str, 'annoTitle': anno.title, 'firstWords': first_words, 'content': anno.markup});
+                    }
+                    note[i] += markup_formated;
                 }
             }
             // add to note text (process notes added to PDF)
@@ -319,12 +327,18 @@ Zotero.ZotFile.pdfAnnotations = new function() {
 							     {'content': content, 'cite': link, 'page': page, 'uri': uri, 'label': anno.title,
 							      'color': color, 'color_category': color_category_hex, 'color_hex': color_hex, 'color_category_name': color_category,
 							      'group': groupID, 'key': att.key});
-                if(!setting_color_notes)
+                if(!setting_color_notes && !setting_separated_notes)
                     note += content_formated;
-                else {
+                else if (!setting_separated_notes) {
                     if(!(color_category in note))
                         note[color_category] = this.Utils.str_format(format_title_color, {'title': str_title, 'date': date_str, 'label': anno.title, 'color': color_category});
                     note[color_category] += content_formated;
+                } else {
+                    if(!(i in note)) {
+                        var first_words = content.replace(/(([^\s]+\s\s*){5})(.*)/,"$1...");
+                        note[i] = note[i] = this.Utils.str_format(format_title_separated, {'title': str_title, 'date': date_str, 'annoTitle': anno.title, 'firstWords': first_words, 'content': content});
+                    }
+                    note[i] += content_formated;
                 }
             }
         }
